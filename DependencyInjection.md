@@ -332,6 +332,28 @@ The `IImageEffectAddIn`'s `IApplicationContext` Dependency can vary with each ca
 
 Allows clients to optionally override some class’s default behavior
 
+Similar to `Constructor Injection`, is applied within `Composition root`. Allows you to override a class' local default. Also known as `Setter Injection`
+
+![](img/propertyInjection.png)
+
+```
+public class Consumer
+{
+    public IDependency Dependency { get; set; }
+}
+```
+
+## When
+Should _only_ be used when the class has a good local default but you still want to enable callers to provide different implementations of the dependency.
+
+Should _only_ be used for ***optional*** dependencies.
+
+Rarely used in applications (sometimes used in reusable libraries)
+
+# Choosing which pattern to use
+![](img/whatToUse.png)
+
+
 # Code smells
 
 ## Constructor Overinjection
@@ -687,6 +709,235 @@ Dependency cycles are typically caused by an SRP violation.
 - Split classes: split a big class into smaller classes 
 - .NET event: raise events instead of directly invoke another class
 - Property injection: should be the last ditch effort
+
+## Temporal Coupling
+
+Occurs when there's an implicit relationship between two or more members of a class, requiring clients to invoke one member before the other
+
+Example: `Initialize` methods
+```
+public class Component
+{
+    private ISomeInterface dependency;
+
+    public void Initialize(     
+        ISomeInterface dependency)    
+    {
+        this.dependency = dependency;
+    }
+
+    public void DoSomething()
+    {
+        if (this.dependency == null)    
+            throw new InvalidOperationException(    
+                "Call Initialize first.");     
+
+        this.dependency.DoStuff();
+    }
+}
+```
+`Initialize` and `DoSomething` methods need to be invoked in a particular order, but this relationship is implicit.
+
+**Solution**: Apply `Constructor Injection`
+
+**Note**: `Constuctor Injection` should be primarily used when building applications, `Method Injection` frameworks. (not a rule as MI can be useful in applications too: ***optional*** dependencies)
+
+# DI anti-patterns
+## Control freak
+As opposed to IoC, dependencies are controlled directly
+```
+public class HomeController : Controller
+{
+    public ViewResult Index()
+    {
+        var service = new ProductService();    // Create a new instance of a volatile dependancy, causing tightly coupled code
+
+        var products = service.GetFeaturedProducts();
+        return this.View(products);
+    }
+}
+```
+
+Be wary of factory methods
+
+### Control freak through overloaded constructors
+An all-too-common anti-pattern defines a test-specific constructor overload that allows you to explicitly define a Dependency, although the production code uses a parameterless constructor
+```
+private readonly IProductRepository repository;
+
+public ProductService()      
+    : this(new SqlProductRepository())      // parameterless constructor forwards the foreign default to the overloaded constructor
+{      
+}      
+
+public ProductService(IProductRepository repository)      
+{      
+    if (repository == null)      
+        throw new ArgumentNullException("repository");      
+      
+    this.repository = repository;      
+}      
+```
+
+This allows unit testing but still promotes tightly coupled codes
+
+**Foreign default**: an implementation of a Volatile Dependency that’s used as a default, even though it’s defined in a different module than its consumer
+
+## Service Locator
+An implicit service to server dependencies to customers but isn't guaranteed to do so. Supplies application components outside the Composition Root with access to an unbounded set of Volatile Dependencies.
+```
+public class HomeController : Controller
+{
+    public HomeController() { }      // Parameterless constructor
+
+    public ViewResult Index()
+    {
+        IProductService service =
+            Locator.GetService<IProductService>();      // request the service w a static Locator class
+
+        var products = service.GetFeaturedProducts();      
+
+        return this.View(products);
+    }
+}
+```
+Asking a container or locator to resolve a complete object graph from the Composition Root is proper usage. Asking it for granular services from anywhere else but the Composition Root implies the Service Locator anti-pattern. 
+
+```
+public static class Locator
+{
+    private static Dictionary<Type, object> services =      
+        new Dictionary<Type, object>(); // internal dictionary that maps abstract types to concrete instances
+
+    public static void Register<T>(T service) // register service before using
+    {
+        services[typeof(T)] = service;
+    }
+
+    public static T GetService<T>()      // Resolve arbitrary abstraction
+    {   
+        return (T)services[typeof(T)];     
+    }
+
+    public static void Reset() // reset the services (for unit testing)
+    {
+        services.Clear();
+    }
+}
+```
+Classes rely on the service to be available in the `Service Locator`, so it’s important that it’s previously configured. 
+
+### **Negative effects of Service Locator**
+- Classes now depend on both the `Service Locator` and the dependencies
+- It's non obvious what the dependencies for the class are
+- Interdependent tests (you need to remember to call reset() after every test)
+- `GetService<T>` will accept any type and compile but might throw exceptions at runtime
+
+## Ambient Context
+Makes a single dependency available through a static accessor
+
+Supplies application code outside the Composition Root with global access to a Volatile Dependency or its behavior by the use of static class members.
+```
+public string GetWelcomeMessage()
+{
+    ITimeProvider provider = TimeProvider.Current;      
+    DateTime now = provider.Now;
+
+    string partOfDay = now.Hour < 6 ? "night" : "day";
+
+    return string.Format("Good {0}.", partOfDay);
+}
+```
+Ambient Context allows its Dependency to be changed, whereas the Singleton pattern ensures that its singular instance never changes. That said, the Singleton pattern should only be used either from within the Composition Root or when the Dependency is Stable.
+### Ambience context when logging
+```
+public class MessageGenerator
+{
+    private static readonly ILog Logger =
+        LogManager.GetLogger(typeof(MessageGenerator));  // this hides dependency and makes it hard to test 
+
+    public string GetWelcomeMessage()
+    {
+        Logger.Info("GetWelcomeMessage called.");      
+
+        return string.Format(
+            "Hello. Current time is: {0}.", DateTime.Now);
+    }
+}
+```
+## Constrained Construction
+Constructors are assumed to have a particular signature (with ath goal of enabling late binding)
+
+# Decorator pattern
+![](img/decoratorPattern.png)
+
+A Decorator can wrap another Decorator, which wraps another Decorator, and so on
+
+```
+public interface IGreeter{    
+    string Greet(string name);
+}
+
+public class FormalGreeter : IGreeter
+{
+    public string Greet(string name)
+    {
+        return "Hello, " + name + ".";
+    }
+}
+
+public class SimpleDecorator : IGreeter      
+{
+    private readonly IGreeter decoratee;      
+
+    public SimpleDecorator(IGreeter decoratee)
+    {
+        this.decoratee = decoratee;
+    }
+
+    public string Greet(string name)
+    {
+        return this.decoratee.Greet(name);      
+    }
+}
+```
+The wrapped object implements the same Abstraction as the Decorator. This enables a Composer to replace the original component with a Decorator without changing the consumer.The wrapped object is often injected into the Decorator declared as the abstract type (interface and not the concrete implementation)
+
+# Cross-cutting concern
+
+Using Decorator pattern to implement Auditing (a cross cutting concern)
+
+![](img/auditingDecorator.png)
+
+Note how only the update operation gets audited. This is because most of the time, only CUD operations are audited (ignoring read operations).
+
+```
+public class AuditingUserRepositoryDecorator
+    : IUserRepository      
+{
+    private readonly IAuditTrailAppender appender;
+    private readonly IUserRepository decoratee;
+
+    public AuditingProductRepository(
+        IAuditTrailAppender appender,
+        IUserRepository decoratee)      
+    {
+        this.appender = appender;
+        this.decoratee = decoratee;
+    }
+    public User GetById(Guid id)      
+    {      
+        return this.decoratee.GetById(id);      
+    }      
+
+    public void Update(User user)      
+    {      
+        this.decoratee.Update(user);      
+        this.appender.Append(user);      
+    }      
+}
+```
+
 # Tips
 
 Runtime data that describes contextual information is best hidden behind an Abstraction and injected into a consumer
