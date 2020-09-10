@@ -868,7 +868,12 @@ public class MessageGenerator
 ## Constrained Construction
 Constructors are assumed to have a particular signature (with ath goal of enabling late binding)
 
-# Decorator pattern
+# Interception
+The ability to intercep calls between two collaborating components so you can enrich or change the behaviour f the dependency without changing the 2 colaborators themselves
+
+![](img/interception.png)
+
+## Decorator pattern
 ![](img/decoratorPattern.png)
 
 A Decorator can wrap another Decorator, which wraps another Decorator, and so on
@@ -903,7 +908,7 @@ public class SimpleDecorator : IGreeter
 ```
 The wrapped object implements the same Abstraction as the Decorator. This enables a Composer to replace the original component with a Decorator without changing the consumer.The wrapped object is often injected into the Decorator declared as the abstract type (interface and not the concrete implementation)
 
-# Cross-cutting concern
+## Cross-cutting concern
 
 Using Decorator pattern to implement Auditing (a cross cutting concern)
 
@@ -937,6 +942,30 @@ public class AuditingUserRepositoryDecorator
     }      
 }
 ```
+
+`AuditingUserRepositoryDecorator` implements the same interface it decorates. It wraps an `IUserRepository` which it can delegate its core implementation. `IAuditTrailAppender` is an abstraction itself so  you can change the concrete implementation too. All `AuditingUserRepositoryDecorator` does is to coordiate these two things.
+
+# Aspect-oriented Programming
+Aspect-Oriented Programming aims to reduce boilerplate code required for implementing Cross-Cutting Concerns by implementing such patterns in a single place and applying them to a code base
+```
+public void Delete(Product product)
+{
+    this.breaker.Guard();
+
+    try
+    {
+        this.decoratee.Delete(product); // This is the only method for the domain, the rest is boilerplate and will be duplicated for Insert, Update methods
+        this.breaker.Succeed(); 
+    }
+    catch (Exception ex)
+    {
+        this.breaker.Trip(ex);
+        throw;
+    }
+}
+```
+
+A simple way to spot low cohesion is to check how easy it is to move some of the class’s functionality to a new class. The easier this is, the lower the relatedness of the two parts, and the more likely SRP is violated.
 
 # Tips
 
