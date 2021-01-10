@@ -314,3 +314,80 @@ Learn text manipulation: `sed` and `awk` are powerful. Python and Ruby are also 
 ## 22. Engineering daybooks
 
 Try journaling on what you're working on. Leave reminders, etc. Try using paper and not a file.
+
+## 23. Design by contract
+
+- Preconditions: what must be true for the routine to be called
+- Postconditions
+- Class invariants: conditions that will always be true from the perspective of the caller.
+
+Be strict in what you will accept before you begin, and promise as little as possible in return
+
+Enumerate what the input domain range is, the boundary conditions, and what the function promises to deliver, and what it *doesn't* promise to deliver before you write the code.
+
+You can put the contract in the unit tests.
+
+## 24. Crash early
+
+You might feel tempted to catch exceptions to log something then rethrow it like below
+
+```
+try {
+    DoSomething();
+} catch (ExceptionA a) {
+    Logger.Log("Exception A");
+    throw;
+} catch (ExceptionB b) {
+    Logger.Log("Exception B");
+    throw;
+}
+```
+
+but this leads to 2 problem: 
+
+1. The application code is aclipsed by error handling
+2. We become more coupled to `DoSomething()` if `DoSomething()` suddenly throws `ExceptionC`, our code is now out of date.
+
+It's better to just call `DoSomething()` directly. By doing so, the new exception is automatically propagated.
+
+There are times when it's simply inappropriate to terminate the program. However, it's best to terminate it asap. Once somethin wrong happens, your program is no longer viable.
+
+**A dead program does a lot less damage than a crippled one**
+
+## 25. Use assertions to prevent the impossible
+
+Whenever you find yourself thinking “but of course that could never happen,” use `assert` to check it
+
+Be careful about having side effects in your assertions. e.g
+
+```
+while​ (iter.hasMoreElements()) {
+​ 	  ​assert​(iter.nextElement() != ​null​);
+​ 	  Object obj = iter.nextElement();
+​ 	  ​// ....​
+​ 	}
+```
+
+## 26. Finish what you start
+
+Resources are: memory, transections, threads, network conenctions, files, timers
+
+The function or object that allocates a resource should be responsible for freeing that resource.
+
+Free resources in the opposite order that you allocate them to avoid orphan resources (similar to html brackets)
+
+When allocating the same set of resources in different places in your code, always allocate them in the same order. This will reduce the possibility of deadlock. 
+
+## 27. Take small steps
+
+Always take small, deliberate steps, check for feedback and adjust before proceeding. Consider the rate of feedback your speed limit.
+
+### What is feedback?
+
+Anything that independently confirms or disproves your actions
+
+- Unit tests
+- Repl
+- User demo and conversation that provide feedback on features and usability
+
+**Don't** do things that are too big (guess users' needs, guess future tech, etc.). YAGNI. Avoid fortune telling
