@@ -28,6 +28,11 @@ Compare the logcompare today with logs some time in the past. This tells us if t
 
 `_sourceCategory=blah | logcompare timeshift -24h`
 
+Example 2: 
+
+`_sourceCategory=blah | logcompare timeshift -24h | where (_isNew)`
+
+Only show the logs that are new compared to 24h ago
 
 ### Parse
 
@@ -42,6 +47,10 @@ Example
 This regex extract anything with a pattern of 4 numbers (with 1-3 number letters ex: 1.123.0.456) separated by `.` into a field called `ip_address`
 
 `_sourceCategory=prod/travel/checkout | parse regex "(?<ip_address>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"`
+
+#### UI
+
+Highlight the whole part you want to parse, click Parse Text
 
 ### Count by
 
@@ -170,3 +179,13 @@ Example: Compare the number of success status code today and yesterday
 |--------------|--------|-----------|
 | 200          | 1000   | 1200      |
 | 201          | 850    | 800       |
+
+## Parameters
+
+You can have parameters in your search
+
+`_sourceCategory={{env}}/travel/checkout`
+
+where `env` can be either `test`, `uat`, `prod`
+
+![](img/sumologic-parameters.PNG)
