@@ -391,3 +391,187 @@ Anything that independently confirms or disproves your actions
 - User demo and conversation that provide feedback on features and usability
 
 **Don't** do things that are too big (guess users' needs, guess future tech, etc.). YAGNI. Avoid fortune telling
+
+## 28. Decoupling
+
+Symptoms of coupling:
+
+- Wacky dependencies between unrelated modules/ libs
+- Simple changes that ripple through different modules in the system
+- Fear of changing things because devs don't know what will be affected
+- Meetings everyone has to attend because no one is sure who will be affected by the change
+
+```
+​public​ ​void​ applyDiscount(customer, order_id, discount) {
+​ 	  totals = customer
+​ 	           .orders
+​ 	           .find(order_id)
+​ 	           .getTotals();
+​ 	  totals.grandTotal = totals.grandTotal - discount;
+​ 	  totals.discount   = discount;
+​ 	}
+```
+
+Everything here is coupled together. 
+
+A lot of things have to stay the same for this code to work: the customers need to have orders. Orders need to have find(). Each other needs to have getTotals()
+
+Moreover, because we `applyDiscount()` outside of the total object itself, it's not *cohesive*. Imagine if there's a requirement that the discount can't be more than 40%. Where should we put that code? We can put the code in `applyDiscount()` here, but we can't never be sure because anything can change `totals.grandTotal`
+
+Think about **responsibilities**. Surely, applying discount is the work of `totals` itself.
+
+**Tell, don't ask**
+
+This principle says that you shouldn't make decisions based on the internal state of an object and then update that object. Doing so destroys the benefits of encapsulation.
+
+```
+​ 	​public​ ​void​ applyDiscount(customer, order_id, discount) {
+​ 	  customer
+​ 	    .orders
+​ 	    .find(order_id)
+​ 	    .getTotals()
+​ 	    .applyDiscount(discount);
+​ 	}
+```
+
+Similarly, we should get the order directly from `customer` instead of accessing the `orders` field and call `find()`
+
+```
+​public​ ​void​ applyDiscount(customer, order_id, discount) {
+​ 	  customer
+​ 	    .findOrder(order_id)
+​ 	    .getTotals()
+​ 	    .applyDiscount(discount);
+​ 	}
+```
+
+You can even go further here and say that "We don't need anyone to know that `order` has a separate object `totals` to store totals. That's implementation details" and simplify it to 
+
+```
+​ 	​public​ ​void​ applyDiscount(customer, order_id, discount) {
+​ 	  customer
+​ 	    .findOrder(order_id)
+​ 	    .applyDiscount(discount);
+​ 	}
+```
+
+**Try not to chain method calls**
+
+Exception: librarires that come with the language is pretty stable.
+
+**Avoid global data**
+
+Global data icludes external resources (database, datastore, file system, service api, etc.)
+
+The solution is to make sure you wrap these resources behind code that you control
+
+## 29. Strategies to write code that responds to an event
+
+### Finite state machines
+
+![](img/events_simple_fsm.png)
+
+### The observer pattern
+
+There’s not much code involved in creating an observable: you push a function reference onto a list, and then call those functions when the event occurs. This is a good example of when not to use a library.
+
+https://docs.microsoft.com/en-us/dotnet/standard/events/observer-design-pattern
+
+But the observer pattern has a problem: because each of the observers has to register with the observable, it introduces coupling. In addition, because in the typical implementation the callbacks are handled inline by the observable, synchronously, it can introduce performance bottlenecks.
+
+This is solved by the next strategy, Publish/Subscribe.
+
+### Publish / Subscribe
+
+Pubsub is a good technology for decoupling the handling of asynchronous events.
+
+Although you could implement a very basic pubsub system yourself, you probably don’t want to. Most cloud service providers have pubsub offerings, allowing you to connect applications around the world. Every popular language will have at least one pubsub library.
+
+
+### Reactive programming and streams
+
+Streams let us treat events as if they were a collection of data. We can manipulate, combine, filter, and do all the other data-ish things we know so well.
+
+http://reactivex.io/ defines a language agnostic set of principles and documents common implementations
+
+Our first example takes two streams and zips them together: the result is a new stream where each element contains one item from the first input stream and one item from the other. In this case, the first stream is simply a list of five animal names. The second stream is more interesting: it’s an interval timer which generates an event every 500ms. Because the streams are zipped together, a result is only generated when data is available on both, and so our result stream only emits a value every half second:
+
+```
+​ 	​import​ * ​as​ Observable ​from​ ​'rxjs'​
+​ 	​import​ { logValues }   ​from​ ​"../rxcommon/logger.js"​
+​ 	
+​ 	​let​ animals  = Observable.​of​(​"ant"​, ​"bee"​, ​"cat"​, ​"dog"​, ​"elk"​)
+​ 	​let​ ticker   = Observable.interval(500)
+​ 	
+​ 	​let​ combined = Observable.zip(animals, ticker)
+​ 	
+​ 	combined.subscribe(next => logValues(JSON.stringify(next)))
+```
+
+and we see
+
+![](img/events_rxjs_0.png)
+
+Watching it live in a browser, the log lines appear at every half second.
+
+**Next example:** we can fetch information about users from a remote site (using reqres.in to simulate data)
+
+```
+​import​ * ​as​ Observable ​from​ ​'rxjs'​
+​ 	​import​ { mergeMap }    ​from​ ​'rxjs/operators'​
+​ 	​import​ { ajax }        ​from​ ​'rxjs/ajax'​
+​ 	​import​ { logValues }   ​from​ ​"../rxcommon/logger.js"​
+​ 	
+​ 	​let​ users = Observable.​of​(3, 2, 1)
+​ 	
+​ 	​let​ result = users.pipe(
+​ 	  mergeMap((user) => ajax.getJSON(​`https://reqres.in/api/users/​${user}​`​))
+​ 	)
+​ 	
+​ 	result.subscribe(
+​ 	  resp => logValues(JSON.stringify(resp.data)),
+​ 	  err  => console.error(JSON.stringify(err))
+​ 	)
+```
+
+![](img/events_three_users.png)
+
+The three requests, or three separate streams, were processed in parallel, The first to come back, for id 2, took 82ms, and the next two came back 50 and 51ms later.
+
+Our list of user IDs (in the observable users) was static. But it doesn’t have to be. Perhaps we want to collect this information when people log in to our site. All we have to do is to generate an observable event containing their user ID when their session is created, and use that observable instead of the static one. We’d then be fetching details about the users as we received these IDs, and presumably storing them somewhere.
+
+This is a very powerful abstraction: we no longer need to think about time as being something we have to manage. Event streams unify synchronous and asynchronous processing behind a common, convenient API.
+
+## 30. Programs are about transforming data
+
+How to find transformation:
+
+- Start with the requirements
+- Determine inputs and outputs
+
+If your background is object-oriented programming, then your reflexes demand that you hide data, encapsulating it inside objects. These objects then chatter back and forth, changing each other’s state. This introduces a lot of coupling, and it is a big reason that OO systems can be hard to change.
+
+## 31. Inheritance is coupling
+
+Use interfaces, protocols, delegation, mixins, and traits
+
+## 32. Configuration
+
+Parameterise your app using external config. Common things include:
+
+- Credentials for external services
+- Logging levels and destination
+- Ports, IP,cluster names
+- Env-specific validation parameters
+- Externally set parameters (i.e. tax rates)
+- Site-specific formatting details
+- License keys
+
+It's advisible to wrap the config behind a thin API to decouple the details of the representation of config
+
+Storing config behind a service API has a number of benefits:
+
+- Multiple apps can share config
+- Config changes can be made globally
+- Config can be maintained via a specialised UI
+- Config data becomes dynamic. (Components register for notifications of updates to the config they use and the service sends them messages containing new values when they're changed)
