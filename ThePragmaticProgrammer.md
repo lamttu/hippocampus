@@ -900,3 +900,41 @@ It boils down to how you deal with uncertainty
 1. Work out where you are
 2. Make the smallest meaningful step towards where you want to be
 3. Evaluate where you end up and fix anything you broke
+
+## 49. Pragmantic teams
+
+Maintain a small, stable team (10-12 members)
+
+Team as a whole must take responsibility for the quality of the product
+
+Encourage everyone to actively monitor the env for changes. Stay awake and aware for increased scope, decreased time scales...
+
+Schedule things to make it happen (do it whenever there's a free moment means never). This includes old system maintenance, process reflection and refinement, new tech experiment, learning and skill improvements
+
+A team needs to communicate with other teams. Generate a brand
+
+Build teams so you can build code end-to-end, incrementally and iteratively.
+
+## 50. Do what works not what's fashionable
+
+How do you know if it works? Try it. Pilot the idea with a small team.
+
+One size fits no one well. You want to take the best pieces from any particular methodology and adapt them for use.
+
+The goal is to deliver working software when the users need it (on demand - this does not mean you're forced to deliver every minute) -> Continuous development
+
+## 51. Pragmatic starter kit
+
+### Version control
+
+Build, test, and deployment are triggered via commits or pushes to version control, and built in a container in the cloud
+
+### Regresion testing
+
+Test Early, Test Often, Test Automatically
+
+The automatic build runs all available tests.
+
+Once a human tester finds a bug, it should be the last time a human tester finds that bug. The automated tests should be modified to check for that particular bug from then on
+
+### Full automation
