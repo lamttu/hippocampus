@@ -823,3 +823,80 @@ The default settings on your app, or for your users on your site, should be the 
 Name well, rename when needed
 
 Follow conventions
+
+## 45. The requirements pit
+
+### No one knows exactly what they want. Programmers help people understand what they want. 
+
+The typical client comes to us with a need. The need may be strategic,but it is just as likely to be a tactical issue: a response to a currentproblem. The need may be for a change to an existing system or it mayask for something new. The need will sometimes be expressed in businessterms, and sometimes in technical ones.
+
+The mistake new developers often make is to take this statement of needand implement a solution for it.
+
+In our experience, this initial statement of need is not an absoluterequirement. The client may not realize this, but it is really aninvitation to explore.
+
+Let’s take a simple example.
+
+You work for a publisher of paper and electronic books. You’re given a new requirement:
+
+Shipping should be free on all orders costing $50 or more.
+
+Stop for a second and imagine yourself in that position. What’s the first thing that comes to mind?
+
+The chances are very good that you had questions:
+
+- Does the $50 include tax?
+- Does the $50 include current shipping charges?
+- Does the $50 have to be for paper books, or can the order also include ebooks?
+- What kind of shipping is offered? Priority? Ground?
+- What about international orders?
+- How often will the $50 limit change in the future?
+
+That’s what we do. When given something that seems simple, we annoy people by looking for edge cases and asking about them.
+
+The chances are the client will have already thought of some of these, and just assumed that the implementation would work that way. Asking the question just flushes that information out.
+
+But other questions will likely be things that the client hadn’t previously considered. That’s where things get interesting, and where a good developer learns to be diplomatic.
+
+### Requirements Are Learned in a Feedback Loop
+
+Produce mockups and prototypes and let the client play with them. Prefer shorter interations that end with direct client feedback
+
+Work with a user to think like a user
+
+Implement the general case, with the policy information as an example of the type of thing the system needs to support. For example: "Only an employee’s supervisors and the personnel department may view that employee’s records." => "Only authorised users may access an employee record".
+
+### Documenting requirements
+
+THe best reuirements documentation is working code but other methods are mileposts to guide the implementation process.
+
+Requirements documents are not for clients but for planning
+
+## Maintain a glossary
+
+As soon as you start discussing requirements, users and domain experts will use certain terms that have specific meaning to them. They may differentiate between a “client” and a “customer,” for example. It would then be inappropriate to use either word casually in the system.
+
+## 46. Solving impossible puzzles
+
+Some constraints are absolute; others are merely preconceived notions. Some apparent constraints may not be real constraints at all.
+
+Identify the real constraints and your degree of freedom. Enumerate all the possible avenues you have. Don't dismiss anything. Go through the list and explain why a certain path cannot be taken. *Prove* it.
+
+Categorise and prioritise your constraints. We want to identify the most restrictive constraints first, and fit the remaining constraints within them.
+
+## 47. Pair / mob programming
+
+Don't go into the code alone 
+
+- Build the code, not your ego.
+- Start small, in short sessions
+- Criticise the code, not the person
+- Listen and try to understand others
+- Conduct retro to try and improve nex time
+
+## 48. Agile is how you do things
+
+It boils down to how you deal with uncertainty
+
+1. Work out where you are
+2. Make the smallest meaningful step towards where you want to be
+3. Evaluate where you end up and fix anything you broke
