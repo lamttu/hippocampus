@@ -575,3 +575,70 @@ Storing config behind a service API has a number of benefits:
 - Config changes can be made globally
 - Config can be maintained via a specialised UI
 - Config data becomes dynamic. (Components register for notifications of updates to the config they use and the service sends them messages containing new values when they're changed)
+
+## 33. Breaking temporal coupling
+
+**Concurrency** is when the execution of two or more pieces of code act as if they run at the same time. (env can switch between different parts of your code, things like: fibers, threads, proccesses)
+
+**Parallelism** is when they do run at the same time (multiple core).
+
+**Temporal coupling** is when your code requires things to run sequentially
+
+### Analyse workflow to improve concurrency
+
+- Find out what *can* happen at the same time, what *must* happen in a strict order.
+- Use activity diagram
+
+An activity diagram consists of a set of actions drawn as rounded boxes. The arrow leaving an action leads to either another action (which can start once the first action completes) or to a thick line called a synchronization bar. Once all the actions leading into a synchronization bar are complete, you can then proceed along any arrows leaving the bar. An action with no arrows leading into it can be started at any time.
+
+You can use activity diagrams to maximize parallelism by identifying activities that could be performed in parallel, but aren’t.
+
+![](img/pina-colada.png)
+
+ In this instance, the top-level tasks (1, 2, 4, 10, and 11) can all happen concurrently, up front. Tasks 3, 5, and 6 can happen in parallel later.
+
+### Not all things are worth running concurrently
+
+Activities diagrams show poetential areas of concurrency but not all are woth exploiting. This is where the design part comes in.
+
+For example, it's hard for the bartendar to do all 1, 2, 4, 10, and 11 at once in the beginning. But we realise that task 8 takes a minute. During this time, the bartendar can do the taks.
+
+- Find activities that take time (query a db, waiting for user input, etc.) and use it to do something else
+
+## 34. Shared state is incorrect state
+
+Random failures are often concurrency issues
+
+## 35. Actors and processes
+
+These 2 offer interesting ways to implement concurrency without synching access to shared memory
+
+**Actors**: an independent virtual processor with its own local and private state. Each actor has a mailbox. When a message appears in the mailbox and the actor is idle, it kicks into life and processes the message. 
+
+When it finishes processing, it processes another message in the mailbox, or, if the mailbox is empty, it goes back to sleep. When processing a message, an actor can create other actors, send messages to other actors that it knows about, and create a new state that will become the current state when the next message is processed.
+
+There’s no single thing that’s in control. Nothing schedules what happens next, or orchestrates the transfer of information from the raw data to the final output.
+
+The only state in the system is held in messages and in the local state of each actor. Messages cannot be examined except by being read by their recipient, and local state is inaccessible outside the actor.
+
+All messages are one way—there’s no concept of replying. If you want an actor to return a response, you include your own mailbox address in the message you send it, and it will (eventually) send the response as just another message to that mailbox.
+
+An actor processes each message to completion, and only processes one message at a time.
+
+**Process**: a more general-purpose virtual processor, often implemented by the operating system to facilitate concurrency. Processes can be constrained (by convention) to behave like actors, and that’s the type of process we mean here.
+
+_Use actors for concurrency without shared state_ 
+
+The overall message flow will look like this:
+
+- We (as some kind of external, God-like being) tell the customer that they are hungry
+
+- In response, they’ll ask the waiter for pie
+
+- The waiter will ask the pie case to get some pie to the customer
+
+- If the pie case has a slice available, it will send it to the customer, and also notify the waiter to add it to the bill
+
+- If there is no pie, the case tells the waiter, and the waiter apologizes to the customer
+
+**Difference**: The pie case is now responsible for dispatching the pie and notify the waiter. The state of the pie case is not shared between different waiters.
