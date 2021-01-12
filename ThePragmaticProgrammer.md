@@ -642,3 +642,184 @@ The overall message flow will look like this:
 - If there is no pie, the case tells the waiter, and the waiter apologizes to the customer
 
 **Difference**: The pie case is now responsible for dispatching the pie and notify the waiter. The state of the pie case is not shared between different waiters.
+
+## 37. Listen to your instinct
+
+Stop what you do to give yourself some time and space to organise the thoughts. Stay away from the key board and sleep on it.
+
+If that doesn't work , make doodles, explain the code to a coworker or to the rubbber duck.
+
+**Prototype**
+
+1. Write “I’m prototyping” on a sticky note, and stick it on the side of your screen.
+2. Remind yourself that prototypes are meant to fail. And remind yourself that prototypes get thrown away, even if they don’t fail. There is no downside to doing this.
+3. In your empty editor buffer, create a comment describing in one sentence what you want to learn or do.
+4. Start coding.
+
+## 38. Program deliberately
+
+- Always know what you're doing
+- Can you explain the code in detail to a more junior programmer? 
+- If you're not sure why it works, you won't know why it fails
+- Have a plan
+- Rely on reliable things, not assumptions. If you can't tell if something is reliable, assume the worst
+- Document your assumptions
+- Test your code *and* your assumptions
+- Spend time on the difficult part.
+- All code can be replaced if it's no longer appropriate. Be ready to refactor
+
+## 39. Algorithm speed
+
+Though it's unlikely that you will spend time writing complex algo, it's still good to be mindful of the speed of what you're writing (ie if you're writing 2 nested loops, you should know it's O(m*n))
+
+## 40. Refactoring
+
+### When? Refactor early, refactor often
+
+- Duplication 
+- Outdated knowledge
+- Nonorthogonal design
+- Usage
+- Performance
+- Tests pass
+
+### How?
+
+- Don't try to refactor and add functionality at the same time
+- Make sure you have good tests before refactoring. Run the tests as often as possible
+- Take short, deliberate steps and keep the steps small
+
+## 41. Test to code
+
+Test end-to-end. Practise TDD but don't forget to stop and look at the big picture. You need to know where you're going.
+
+Test against the contracts with a wide range of test cases and boundary conditions based on preconditions and postconditions.
+
+## 42. Property-based tests
+
+Use property-based tests to validate your code invariants (things that remain true about some state when it's passed through a function) For example, if you sort a list, the result will have the same number of elements as the original - the length is invariant.
+
+We’re writing a simple order processing and stock control system (because there’s always room for one more). It models the stock levels with a Warehouse object. We can query a warehouse to see if something is in stock, remove things from stock, and get the current stock levels.
+
+```
+​ 	​class​ Warehouse:
+​ 	    ​def​ __init__(self, stock):
+​ 	        self.stock = stock
+​ 	
+​ 	    ​def​ in_stock(self, item_name):
+​ 	        ​return​ (item_name ​in​ self.stock) ​and​ (self.stock[item_name] > 0)
+​ 	
+​ 	    ​def​ take_from_stock(self, item_name, quantity):
+​ 	        ​if​ quantity <= self.stock[item_name]:
+​ 	            self.stock[item_name] -= quantity
+​ 	        ​else​:
+​ 	          ​raise​ Exception(​"Oversold {}"​.format(item_name))
+​ 	
+​ 	    ​def​ stock_count(self, item_name):
+​ 	        ​return​ self.stock[item_name]
+```
+
+Basic unit test that passes:
+
+```
+​ 	​class​ Warehouse:
+​ 	    ​def​ __init__(self, stock):
+​ 	        self.stock = stock
+​ 	
+​ 	    ​def​ in_stock(self, item_name):
+​ 	        ​return​ (item_name ​in​ self.stock) ​and​ (self.stock[item_name] > 0)
+​ 	
+​ 	    ​def​ take_from_stock(self, item_name, quantity):
+​ 	        ​if​ quantity <= self.stock[item_name]:
+​ 	            self.stock[item_name] -= quantity
+​ 	        ​else​:
+​ 	          ​raise​ Exception(​"Oversold {}"​.format(item_name))
+​ 	
+​ 	    ​def​ stock_count(self, item_name):
+​ 	        ​return​ self.stock[item_name]
+```
+
+Then we wrote an `order()` function and some tests
+
+```
+​def​ order(warehouse, item, quantity):
+​ 	    ​if​ warehouse.in_stock(item):
+​ 	        warehouse.take_from_stock(item, quantity)
+​ 	        ​return​ ( ​"ok"​, item, quantity )
+​ 	    ​else​:
+​ 	        ​return​ ( ​"not available"​, item, quantity )
+
+​def​ test_order_in_stock():
+​ 	    wh = Warehouse({​"shoes"​: 10, ​"hats"​: 2, ​"umbrellas"​: 0})
+​ 	    status, item, quantity = order(wh, ​"hats"​, 1)
+​ 	    ​assert​ status   == ​"ok"​
+​ 	    ​assert​ item     == ​"hats"​
+​ 	    ​assert​ quantity == 1
+​ 	    ​assert​ wh.stock_count(​"hats"​) == 1
+​ 	
+​ 	​def​ test_order_not_in_stock():
+​ 	    wh = Warehouse({​"shoes"​: 10, ​"hats"​: 2, ​"umbrellas"​: 0})
+​ 	    status, item, quantity = order(wh, ​"umbrellas"​, 1)
+​ 	    ​assert​ status   == ​"not available"​
+​ 	    ​assert​ item     == ​"umbrellas"​
+​ 	    ​assert​ quantity == 1
+​ 	    ​assert​ wh.stock_count(​"umbrellas"​) == 0
+​ 	
+​ 	​def​ test_order_unknown_item():
+​ 	    wh = Warehouse({​"shoes"​: 10, ​"hats"​: 2, ​"umbrellas"​: 0})
+​ 	    status, item, quantity = order(wh, ​"bagel"​, 1)
+​ 	    ​assert​ status   == ​"not available"​
+​ 	    ​assert​ item     == ​"bagel"​
+​ 	    ​assert​ quantity == 1
+```
+
+Now lets add some property tests. We know stock can't disappear across transaction => The number we took + the number currently in the warehouse = the original number of stock. 
+
+```
+@given​(item     = some.sampled_from([​"shoes"​, ​"hats"​]),
+​ 	       quantity = some.integers(min_value=1, max_value=4))
+​ 	
+​ 	​def​ test_stock_level_plus_quantity_equals_original_stock_level(item, quantity):
+​ 	    wh = Warehouse({​"shoes"​: 10, ​"hats"​: 2, ​"umbrellas"​: 0})
+​ 	    initial_stock_level = wh.stock_count(item)
+​ 	    (status, item, quantity) = order(wh, item, quantity)
+​ 	    ​if​ status == ​"ok"​:
+​ 	        ​assert​ wh.stock_count(item) + quantity == initial_stock_level
+```
+
+The test fails at `warehouse.take_from_stock`: we tried to remove three hats from the warehouse, but it only has two in stock. 
+
+The property test found a faulty assumption: our `in_stock` function only checks that there’s at least one of the given item in stock. Instead we need to make sure we have enough to fill the order
+
+```
+def​ in_stock(self, item_name, quantity):
+»	    ​return​ (item_name ​in​ self.stock) ​and​ (self.stock[item_name] >= quantity)
+```
+
+## 43. Keep it simple and minimise attack surface area
+
+### Security basic principles
+
+#### 1. Minimize Attack Surface Area
+
+Attack surface area is the sum of all access points where an attacker can enter data, extract data, or invoke execution of a service. 
+
+Simple, smaller code is better.
+
+Input data, unauthenticated and authenticated services, output data, debugging info are all attack vectors.
+
+#### 2. Principle of Least Privilege
+
+#### 3. Secure Defaults
+
+The default settings on your app, or for your users on your site, should be the most secure values.
+
+#### 4. Encrypt Sensitive Data
+
+#### 5. Maintain Security Updates
+
+## 44. Naming things
+
+Name well, rename when needed
+
+Follow conventions
